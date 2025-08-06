@@ -1,9 +1,13 @@
 import { NextResponse } from 'next/server';
-import { promises as fs } from 'fs';
 import path from 'path';
 import { logger } from '@/utils/logger';
+import {
+  DATA_DIR,
+  ensureDataDirectory,
+  readJsonFile,
+  writeJsonFile,
+} from '@/utils/fs';
 
-const DATA_DIR = path.join(process.cwd(), 'data');
 const VOTES_FILE = path.join(DATA_DIR, 'votes.json');
 const IP_VOTES_FILE = path.join(DATA_DIR, 'ip-votes.json');
 
@@ -13,32 +17,6 @@ interface VoteData {
 
 interface IpVotes {
   [key: string]: boolean;
-}
-
-async function ensureDataDirectory() {
-  try {
-    await fs.access(DATA_DIR);
-  } catch {
-    await fs.mkdir(DATA_DIR, { recursive: true });
-  }
-}
-
-async function readJsonFile<T>(filePath: string, defaultValue: T): Promise<T> {
-  try {
-    await fs.access(filePath);
-    const content = await fs.readFile(filePath, 'utf-8');
-    return JSON.parse(content) as T;
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-      await fs.writeFile(filePath, JSON.stringify(defaultValue));
-      return defaultValue;
-    }
-    throw error;
-  }
-}
-
-async function writeJsonFile<T>(filePath: string, data: T): Promise<void> {
-  await fs.writeFile(filePath, JSON.stringify(data, null, 2));
 }
 
 export async function GET() {

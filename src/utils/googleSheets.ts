@@ -1,4 +1,4 @@
-import { google } from 'googleapis';
+import { google, sheets_v4 } from 'googleapis';
 
 interface RegistrationData {
   timestamp: string;
@@ -30,12 +30,13 @@ function convertGoogleDriveLink(url: string): string {
   }
 }
 
-async function validateSpreadsheetAccess(sheets: any, spreadsheetId: string) {
+async function validateSpreadsheetAccess(
+  sheets: sheets_v4.Sheets,
+  spreadsheetId: string
+) {
   try {
     // Try to get spreadsheet metadata first
-    const response = await sheets.spreadsheets.get({
-      spreadsheetId: spreadsheetId,
-    });
+    await sheets.spreadsheets.get({ spreadsheetId });
     console.log('Successfully validated spreadsheet access');
     return true;
   } catch (error) {
@@ -43,9 +44,15 @@ async function validateSpreadsheetAccess(sheets: any, spreadsheetId: string) {
       console.error('Spreadsheet access validation failed:', error.message);
       const apiError = error as { code?: number; message?: string };
       if (apiError.code === 403) {
-        throw new Error(`Access denied to spreadsheet. Please ensure the service account (${process.env.GOOGLE_SHEETS_CLIENT_EMAIL}) has been granted access to the spreadsheet.`);
+        throw new Error(
+          `Access denied to spreadsheet. Please share the spreadsheet with the service account email: ${
+            process.env.GOOGLE_SHEETS_CLIENT_EMAIL
+          }. Link: https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit#gid=0`
+        );
       } else if (apiError.code === 404) {
-        throw new Error(`Spreadsheet not found. Please verify the spreadsheet ID: ${spreadsheetId}`);
+        throw new Error(
+          `Spreadsheet not found. Please verify the spreadsheet ID: ${spreadsheetId}`
+        );
       }
     }
     throw error;
@@ -54,19 +61,34 @@ async function validateSpreadsheetAccess(sheets: any, spreadsheetId: string) {
 
 async function getAuthClient() {
   try {
-    if (!process.env.GOOGLE_SHEETS_CLIENT_EMAIL || !process.env.GOOGLE_SHEETS_PRIVATE_KEY) {
-      throw new Error('Missing required environment variables for Google Sheets authentication');
+    const requiredEnvVars = [
+      'GOOGLE_SHEETS_CLIENT_EMAIL',
+      'GOOGLE_SHEETS_PRIVATE_KEY',
+    ];
+    const missingEnvVars = requiredEnvVars.filter((v) => !process.env[v]);
+
+    if (missingEnvVars.length > 0) {
+      throw new Error(
+        `Missing required environment variables for Google Sheets: ${missingEnvVars.join(
+          ', '
+        )}`
+      );
     }
 
     console.log('Initializing Google Sheets authentication...');
-    console.log('Using service account:', process.env.GOOGLE_SHEETS_CLIENT_EMAIL);
-    
+    console.log(
+      'Using service account:',
+      process.env.GOOGLE_SHEETS_CLIENT_EMAIL
+    );
+
     // Clean up private key - ensure proper line breaks and remove quotes
-    const privateKey = process.env.GOOGLE_SHEETS_PRIVATE_KEY
-      .replace(/\\n/g, '\n')
+    const privateKey = process.env.GOOGLE_SHEETS_PRIVATE_KEY.replace(
+      /\\n/g,
+      '\n'
+    )
       .replace(/"$/, '')
       .replace(/^"/, '');
-    
+
     const auth = new google.auth.GoogleAuth({
       scopes: SCOPES,
       credentials: {
@@ -78,9 +100,9 @@ async function getAuthClient() {
     });
 
     // Test the authentication
-    const client = await auth.getClient();
+    await auth.getClient();
     console.log('Successfully authenticated with Google Sheets API');
-    
+
     return auth;
   } catch (error) {
     console.error('Error creating auth client:', error);

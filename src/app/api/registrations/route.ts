@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getRegistrationData } from '@/utils/googleSheets';
 
-export async function GET(request: Request) {
+export async function GET() {
   try {
     console.log('Fetching registration data...');
     const data = await getRegistrationData();
@@ -40,7 +40,7 @@ export async function GET(request: Request) {
 }
 
 // Handle OPTIONS request for CORS
-export async function OPTIONS(request: Request) {
+export async function OPTIONS() {
   return NextResponse.json({}, {
     status: 200,
     headers: {

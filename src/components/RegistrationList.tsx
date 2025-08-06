@@ -53,10 +53,7 @@ export default function RegistrationList({ selectedActivity, showVoteButtons = t
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [registrationsResponse, votesResponse] = await Promise.all([
-          fetch('/api/registrations'),
-          fetch('/api/votes')
-        ]);
+        const registrationsResponse = await fetch('/api/registrations');
 
         if (!registrationsResponse.ok) {
           const errorData = await handleApiError(registrationsResponse);
@@ -73,7 +70,7 @@ export default function RegistrationList({ selectedActivity, showVoteButtons = t
         const errorMessage = err instanceof Error ? err.message : 'Failed to load data';
         logger.error(err, { context: 'Registration list' });
         setError(errorMessage);
-        toast.error('Failed to load registrations');
+        toast.error(`Failed to load registrations: ${errorMessage}`);
       } finally {
         setLoading(false);
       }
